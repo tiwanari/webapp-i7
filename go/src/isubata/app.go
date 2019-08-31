@@ -139,14 +139,14 @@ func queryPosts(chanID, lastID int64) ([]Post, error) {
 			m.content AS "message.content",
 			u.name AS "user.name",
 			u.display_name AS "user.display_name",
-			u.avatar_icon AS "user.avatar_icon",
+			u.avatar_icon AS "user.avatar_icon"
 		 FROM
 			message m
-		 WHERE
-			id > ? AND channel_id = ?
 		 JOIN
 			user u ON u.id = m.user_id
-		 ORDER BY id DESC
+		 WHERE
+			m.id > ? AND m.channel_id = ?
+		 ORDER BY m.id DESC
 		 LIMIT 100`
 
 	err := db.Select(&posts, q, lastID, chanID)
