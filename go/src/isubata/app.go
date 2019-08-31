@@ -224,8 +224,8 @@ func saveIconsAsImage() {
 		var name string
 		var data []byte
 
-		_ := rows.Scan(&name, &data)
-		_ := saveIcon(name, data)
+		_ = rows.Scan(&name, &data)
+		_ = saveIcon(name, data)
 	}
 }
 
@@ -705,7 +705,7 @@ func getIcon(c echo.Context) error {
 	var name string
 	var data []byte
 
-	data, err = ioutil.ReadFile(iconFolder + name)
+	data, err := ioutil.ReadFile(iconFolder + name)
 	if err != nil {
 		return err
 	}
@@ -729,6 +729,7 @@ func saveIcon(filename string, data []byte) error {
 	if err != nil {
 		return err
 	}
+	return nil
 }
 
 func tAdd(a, b int64) int64 {
