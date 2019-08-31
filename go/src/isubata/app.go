@@ -153,6 +153,30 @@ func queryPosts(chanID, lastID int64) ([]Post, error) {
 	return posts, err
 }
 
+func queryPostsWithOffset(chanID, limit, offset int64) ([]Post, error) {
+	posts := []Post{}
+
+	q := `SELECT
+			m.id AS "message.id",
+			m.created_at AS "message.created_at",
+			m.content AS "message.content",
+			u.name AS "user.name",
+			u.display_name AS "user.display_name",
+			u.avatar_icon AS "user.avatar_icon"
+		 FROM
+			message m
+		 JOIN
+			user u ON u.id = m.user_id
+		 WHERE
+			m.channel_id = ?
+		 ORDER BY m.id DESC
+		 LIMIT ?
+		 OFFSET ?`
+
+	err := db.Select(&posts, q, chanID, limit, offset)
+	return posts, err
+}
+
 func sessUserID(c echo.Context) int64 {
 	sess, _ := session.Get("session", c)
 	var userID int64
@@ -391,22 +415,6 @@ func postMessage(c echo.Context) error {
 	return c.NoContent(204)
 }
 
-func jsonifyMessage(m Message) (map[string]interface{}, error) {
-	u := User{}
-	err := db.Get(&u, "SELECT name, display_name, avatar_icon FROM user WHERE id = ?",
-		m.UserID)
-	if err != nil {
-		return nil, err
-	}
-
-	r := make(map[string]interface{})
-	r["id"] = m.ID
-	r["user"] = u
-	r["date"] = m.CreatedAt.Format("2006/01/02 15:04:05")
-	r["content"] = m.Content
-	return r, nil
-}
-
 func getMessage(c echo.Context) error {
 	userID := sessUserID(c)
 	if userID == 0 {
@@ -560,20 +568,21 @@ func getHistory(c echo.Context) error {
 		return ErrBadReqeust
 	}
 
-	messages := []Message{}
-	err = db.Select(&messages,
-		"SELECT * FROM message WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?",
-		chID, N, (page-1)*N)
+	posts, err := queryPostsWithOffset(chID, N, (page-1)*N)
 	if err != nil {
 		return err
 	}
 
 	mjson := make([]map[string]interface{}, 0)
-	for i := len(messages) - 1; i >= 0; i-- {
-		r, err := jsonifyMessage(messages[i])
-		if err != nil {
-			return err
-		}
+	for i := len(posts) - 1; i >= 0; i-- {
+		p := posts[i]
+
+		r := make(map[string]interface{})
+		r["id"] = p.Message.ID
+		r["user"] = p.User
+		r["date"] = p.Message.CreatedAt.Format("2006/01/02 15:04:05")
+		r["content"] = p.Message.Content
+
 		mjson = append(mjson, r)
 	}
 
