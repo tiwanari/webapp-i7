@@ -210,6 +210,9 @@ func getInitialize(c echo.Context) error {
 	db.MustExec("DELETE FROM message WHERE id > 10000")
 	db.MustExec("DELETE FROM haveread")
 
+	if err := os.MkdirAll(iconFolder, 0644); err != nil {
+		return err
+	}
 	saveIconsAsImage()
 
 	return c.String(204, "")
