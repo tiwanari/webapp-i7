@@ -27,6 +27,7 @@ import (
 
 const (
 	avatarMaxBytes = 1 * 1024 * 1024
+	iconFolder = "./icons/"
 )
 
 var (
@@ -662,10 +663,11 @@ func postProfile(c echo.Context) error {
 	}
 
 	if avatarName != "" && len(avatarData) > 0 {
-		_, err := db.Exec("INSERT INTO image (name, data) VALUES (?, ?)", avatarName, avatarData)
+		err := ioutil.WriteFile(iconFolder + avatarName, avatarData, 0644)
 		if err != nil {
 			return err
 		}
+
 		_, err = db.Exec("UPDATE user SET avatar_icon = ? WHERE id = ?", avatarName, self.ID)
 		if err != nil {
 			return err
@@ -685,11 +687,8 @@ func postProfile(c echo.Context) error {
 func getIcon(c echo.Context) error {
 	var name string
 	var data []byte
-	err := db.QueryRow("SELECT name, data FROM image WHERE name = ?",
-		c.Param("file_name")).Scan(&name, &data)
-	if err == sql.ErrNoRows {
-		return echo.ErrNotFound
-	}
+
+	data, err = ioutil.ReadFile(iconFolder + name)
 	if err != nil {
 		return err
 	}
