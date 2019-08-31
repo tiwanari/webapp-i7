@@ -125,11 +125,32 @@ type Message struct {
 	CreatedAt time.Time `db:"created_at"`
 }
 
-func queryMessages(chanID, lastID int64) ([]Message, error) {
-	msgs := []Message{}
-	err := db.Select(&msgs, "SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100",
-		lastID, chanID)
-	return msgs, err
+type Post struct {
+	User 	User 	`db:"user"`
+	Message Message	`db:"message"`
+}
+
+func queryPosts(chanID, lastID int64) ([]Post, error) {
+	posts := []Post{}
+
+	q := `SELECT
+			m.id AS "message.id",
+			m.created_at AS "message.created_at",
+			m.content AS "message.content",
+			u.name AS "user.name",
+			u.display_name AS "user.display_name",
+			u.avatar_icon AS "user.avatar_icon",
+		 FROM
+			message m
+		 WHERE
+			id > ? AND channel_id = ?
+		 JOIN
+			user u ON u.id = m.user_id
+		 ORDER BY id DESC
+		 LIMIT 100`
+
+	err := db.Select(&posts, q, lastID, chanID)
+	return posts, err
 }
 
 func sessUserID(c echo.Context) int64 {
@@ -401,26 +422,30 @@ func getMessage(c echo.Context) error {
 		return err
 	}
 
-	messages, err := queryMessages(chanID, lastID)
+	posts, err := queryPosts(chanID, lastID)
 	if err != nil {
 		return err
 	}
 
 	response := make([]map[string]interface{}, 0)
-	for i := len(messages) - 1; i >= 0; i-- {
-		m := messages[i]
-		r, err := jsonifyMessage(m)
-		if err != nil {
-			return err
-		}
+	for i := len(posts) - 1; i >= 0; i-- {
+		p := posts[i]
+
+		r := make(map[string]interface{})
+		r["id"] = p.Message.ID
+		r["user"] = p.User
+		r["date"] = p.Message.CreatedAt.Format("2006/01/02 15:04:05")
+		r["content"] = p.Message.Content
+
 		response = append(response, r)
 	}
 
-	if len(messages) > 0 {
+
+	if len(posts) > 0 {
 		_, err := db.Exec("INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at)"+
 			" VALUES (?, ?, ?, NOW(), NOW())"+
 			" ON DUPLICATE KEY UPDATE message_id = ?, updated_at = NOW()",
-			userID, chanID, messages[0].ID, messages[0].ID)
+			userID, chanID, posts[0].Message.ID, posts[0].Message.ID)
 		if err != nil {
 			return err
 		}
