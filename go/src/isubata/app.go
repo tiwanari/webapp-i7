@@ -703,29 +703,6 @@ func postProfile(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, "/")
 }
 
-func getIcon(c echo.Context) error {
-	var name = c.Param("file_name")
-	var data []byte
-
-	data, err := ioutil.ReadFile(iconFolder + name)
-	if err != nil {
-		return err
-	}
-
-	mime := ""
-	switch true {
-	case strings.HasSuffix(name, ".jpg"), strings.HasSuffix(name, ".jpeg"):
-		mime = "image/jpeg"
-	case strings.HasSuffix(name, ".png"):
-		mime = "image/png"
-	case strings.HasSuffix(name, ".gif"):
-		mime = "image/gif"
-	default:
-		return echo.ErrNotFound
-	}
-	return c.Blob(http.StatusOK, mime, data)
-}
-
 func saveIcon(filename string, data []byte) error {
 	err := ioutil.WriteFile(iconFolder + filename, data, 0644)
 	if err != nil {
@@ -780,7 +757,6 @@ func main() {
 
 	e.GET("add_channel", getAddChannel)
 	e.POST("add_channel", postAddChannel)
-	e.GET("/icons/:file_name", getIcon)
 
 	e.Start(":5000")
 }
