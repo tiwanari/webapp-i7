@@ -27,7 +27,9 @@ import (
 
 const (
 	avatarMaxBytes = 1 * 1024 * 1024
-	iconFolder = "./icons/"
+	rootFolder = "../"
+	publicFolder = rootFolder + "public/"
+	iconFolder = publicFolder + "icons/"
 )
 
 var (
@@ -757,7 +759,7 @@ func main() {
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 		Format: "request:\"${method} ${uri}\" status:${status} latency:${latency} (${latency_human}) bytes:${bytes_out}\n",
 	}))
-	e.Use(middleware.Static("../public"))
+	e.Use(middleware.Static(publicFolder))
 
 	e.GET("/initialize", getInitialize)
 	e.GET("/", getIndex)
