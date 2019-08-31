@@ -473,24 +473,27 @@ func fetchUnread(c echo.Context) error {
 
 	query := `
 SELECT
-c.channel_id
+b.id as channel_id
 , CASE
-WHEN d.last_id is null then count(id)
+WHEN d.last_id is null then count(c.id)
 ELSE count(c.id > d.last_id or null)
 END as cnt
 FROM
+channel b
+left join
 message c
+on b.id = c.channel_id
 left join
 (SELECT
 a.channel_id
-, (select max(message_id) from haveread b where b.channel_id = a.channel_id) as last_id
+,a.message_id as last_id
 from haveread a
 where a.user_id = ?
 ) d
 on c.channel_id = d.channel_id
-group by c.channel_id
+group by b.id,d.last_id
   `
-  err := db.Get(&unreads, query, userID)
+	err := db.Select(&unreads, query, userID)
 	if err != nil {
 		return err
 	}
