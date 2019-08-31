@@ -209,7 +209,21 @@ func getInitialize(c echo.Context) error {
 	db.MustExec("DELETE FROM channel WHERE id > 10")
 	db.MustExec("DELETE FROM message WHERE id > 10000")
 	db.MustExec("DELETE FROM haveread")
+
+	saveIconsAsImage()
+
 	return c.String(204, "")
+}
+
+func saveIconsAsImage() {
+	rows, _ := db.Query("SELECT name, data FROM image")
+	for rows.Next() {
+		var name string
+		var data []byte
+
+		_ := rows.Scan(&name, &data)
+		_ := saveIcon(name, data)
+	}
 }
 
 func getIndex(c echo.Context) error {
@@ -663,7 +677,7 @@ func postProfile(c echo.Context) error {
 	}
 
 	if avatarName != "" && len(avatarData) > 0 {
-		err := ioutil.WriteFile(iconFolder + avatarName, avatarData, 0644)
+		err = saveIcon(avatarName, avatarData)
 		if err != nil {
 			return err
 		}
@@ -705,6 +719,13 @@ func getIcon(c echo.Context) error {
 		return echo.ErrNotFound
 	}
 	return c.Blob(http.StatusOK, mime, data)
+}
+
+func saveIcon(filename string, data []byte) error {
+	err := ioutil.WriteFile(iconFolder + filename, data, 0644)
+	if err != nil {
+		return err
+	}
 }
 
 func tAdd(a, b int64) int64 {
