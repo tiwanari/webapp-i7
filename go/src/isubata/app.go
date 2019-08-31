@@ -27,9 +27,9 @@ import (
 
 const (
 	avatarMaxBytes = 1 * 1024 * 1024
-	rootFolder = "../"
-	publicFolder = rootFolder + "public/"
-	iconFolder = publicFolder + "icons/"
+	rootFolder     = "../"
+	publicFolder   = rootFolder + "public/"
+	iconFolder     = publicFolder + "icons/"
 )
 
 var (
@@ -464,35 +464,42 @@ func fetchUnread(c echo.Context) error {
 
 	time.Sleep(time.Second)
 
-	channels, err := queryChannels()
+	type UnRead struct {
+		ChannelID int64 `db:"channel_id"`
+		Count     int64 `db:"cnt"`
+	}
+
+	unreads := []UnRead{}
+
+	query := `
+SELECT
+c.channel_id
+, CASE
+WHEN d.last_id is null then count(id)
+ELSE count(c.id > d.last_id or null)
+END as cnt
+FROM
+message c
+left join
+(SELECT
+a.channel_id
+, (select max(message_id) from haveread b where b.channel_id = a.channel_id) as last_id
+from haveread a
+where a.user_id = ?
+) d
+on c.channel_id = d.channel_id
+group by c.channel_id
+  `
+  err := db.Get(&unreads, query, userID)
 	if err != nil {
 		return err
 	}
 
 	resp := []map[string]interface{}{}
-
-	for _, chID := range channels {
-		lastID, err := queryHaveRead(userID, chID)
-		if err != nil {
-			return err
-		}
-
-		var cnt int64
-		if lastID > 0 {
-			err = db.Get(&cnt,
-				"SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id",
-				chID, lastID)
-		} else {
-			err = db.Get(&cnt,
-				"SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?",
-				chID)
-		}
-		if err != nil {
-			return err
-		}
+	for _, row := range unreads {
 		r := map[string]interface{}{
-			"channel_id": chID,
-			"unread":     cnt}
+			"channel_id": row.ChannelID,
+			"unread":     row.Count}
 		resp = append(resp, r)
 	}
 
@@ -704,7 +711,7 @@ func postProfile(c echo.Context) error {
 }
 
 func saveIcon(filename string, data []byte) error {
-	err := ioutil.WriteFile(iconFolder + filename, data, 0644)
+	err := ioutil.WriteFile(iconFolder+filename, data, 0644)
 	if err != nil {
 		return err
 	}
