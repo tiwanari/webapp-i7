@@ -702,7 +702,7 @@ func postProfile(c echo.Context) error {
 }
 
 func getIcon(c echo.Context) error {
-	var name string
+	var name = c.Param("file_name")
 	var data []byte
 
 	data, err := ioutil.ReadFile(iconFolder + name)
