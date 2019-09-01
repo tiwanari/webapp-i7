@@ -30,6 +30,8 @@ const (
 	rootFolder = "../"
 	publicFolder = rootFolder + "public/"
 	iconFolder = publicFolder + "icons/"
+	logFolder = "./logs/"
+	logFile = logFolder + "stdout.log"
 )
 
 var (
@@ -46,6 +48,10 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 }
 
 func init() {
+	os.MkdirAll(logFolder, 0775)
+	file, _ := os.Create(logFile)
+	log.SetOutput(file)
+
 	seedBuf := make([]byte, 8)
 	crand.Read(seedBuf)
 	rand.Seed(int64(binary.LittleEndian.Uint64(seedBuf)))
